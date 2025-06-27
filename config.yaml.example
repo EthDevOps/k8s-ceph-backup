@@ -1,0 +1,36 @@
+# K8s CEPH Backup Tool Configuration
+
+# Backup settings
+backup:
+  temp_dir: "/tmp/k8s-ceph-backup"
+
+# CEPH/RBD settings
+ceph:
+  rbd_path: "rbd"                           # Path to rbd binary
+  config_path: "/etc/ceph/ceph.conf"        # Path to ceph config file (optional)
+  keyring_path: "/etc/ceph/keyring"         # Path to ceph keyring file (optional)
+
+# GPG encryption settings
+gpg:
+  path: "gpg"                               # Path to gpg binary
+  recipient: "backup@example.com"           # GPG recipient for encryption
+  keyring: ""                               # Custom keyring path (optional)
+  trust_model: "always"                     # GPG trust model
+
+# MinIO/S3 settings
+minio:
+  endpoint: "minio.example.com:9000"        # MinIO endpoint
+  access_key: "your-access-key"             # MinIO access key
+  secret_key: "your-secret-key"             # MinIO secret key
+  use_ssl: true                             # Use SSL/TLS
+  bucket_name: "k8s-ceph-backups"          # Bucket name for backups
+
+# Kubernetes settings (optional - uses default kubeconfig if not specified)
+kubernetes:
+  kubeconfig: ""                            # Path to kubeconfig file
+  context: ""                               # Kubernetes context to use
+
+# Logging settings
+logging:
+  level: "info"                             # Log level: debug, info, warn, error
+  format: "text"                            # Log format: text, json

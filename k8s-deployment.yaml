@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-ceph-backup
+  namespace: default
+  labels:
+    app: k8s-ceph-backup
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-ceph-backup
+  template:
+    metadata:
+      labels:
+        app: k8s-ceph-backup
+    spec:
+      serviceAccountName: k8s-ceph-backup
+      containers:
+      - name: k8s-ceph-backup
+        image: k8s-ceph-backup:latest
+        imagePullPolicy: Always
+        command: ["./k8s-ceph-backup"]
+        args: ["--namespace", "production", "--verbose"]
+        env:
+        - name: KUBECONFIG
+          value: ""
+        volumeMounts:
+        - name: config
+          mountPath: /root/.k8s-ceph-backup.yaml
+          subPath: config.yaml
+          readOnly: true
+        - name: ceph-config
+          mountPath: /etc/ceph
+          readOnly: true
+        - name: gpg-keys
+          mountPath: /root/.gnupg
+          readOnly: true
+        - name: temp-storage
+          mountPath: /tmp/k8s-ceph-backup
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: config
+        configMap:
+          name: k8s-ceph-backup-config
+      - name: ceph-config
+        secret:
+          secretName: ceph-config
+      - name: gpg-keys
+        secret:
+          secretName: gpg-keys
+      - name: temp-storage
+        emptyDir:
+          sizeLimit: 10Gi
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k8s-ceph-backup-config
+  namespace: default
+data:
+  client.keyring: |
+    [client.admin]
+        key = AQCkkPNnnYE7CxAAf3wlggjbSf//uLHmGiwLUg==
+        caps mds = "allow *"
+        caps mgr = "allow *"
+        caps mon = "allow *"
+        caps osd = "allow *"
+  client-crash.keyring: |
+    [client.crash]
+        key = AQClkPNnuJdEDhAAc8NjmaxML85/iWXstSp0gg==
+  ceph.conf: |
+    [global]
+        auth_client_required = cephx
+        auth_cluster_required = cephx
+        auth_service_required = cephx
+        cluster_network = 10.128.4.1/24
+        fsid = 6c1e3780-8de9-43c1-8fa0-72fc44e6d8a9
+        mon_allow_pool_delete = true
+        mon_host = 10.128.4.1 10.128.4.2 10.128.4.3 10.128.4.4 10.128.4.5
+        ms_bind_ipv4 = true
+        ms_bind_ipv6 = false
+        osd_pool_default_min_size = 2
+        osd_pool_default_size = 3
+        public_network = 10.128.4.1/24
+    [client]
+        keyring = /etc/ceph/client.keyring
+    [client.crash]
+        keyring = /etc/ceph/client-crash.keyring
+    [mon.colo-pxe-01]
+        public_addr = 10.128.4.1
+    [mon.colo-pxe-02]
+        public_addr = 10.128.4.2
+    [mon.colo-pxe-03]
+        public_addr = 10.128.4.3
+    [mon.colo-pxe-04]
+        public_addr = 10.128.4.4
+    [mon.colo-pxe-05]
+        public_addr = 10.128.4.5
+  config.yaml: |
+    backup:
+      temp_dir: "/tmp/k8s-ceph-backup"
+    
+    ceph:
+      rbd_path: "rbd"
+      config_path: "/etc/ceph/ceph.conf"
+      keyring_path: "/etc/ceph/keyring"
+    
+    gpg:
+      path: "gpg"
+      recipient: "backup@example.com"
+      trust_model: "always"
+    
+    minio:
+      endpoint: "minio.example.com:9000"
+      access_key: "your-access-key"
+      secret_key: "your-secret-key"
+      use_ssl: true
+      bucket_name: "k8s-ceph-backups"
+    
+    logging:
+      level: "info"
+      format: "text"

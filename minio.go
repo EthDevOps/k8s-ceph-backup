@@ -19,8 +19,18 @@ type MinioClient struct {
 
 func NewMinioClient() *MinioClient {
 	endpoint := viper.GetString("minio.endpoint")
-	accessKey := viper.GetString("minio.access_key")
-	secretKey := viper.GetString("minio.secret_key")
+	
+	// Environment variables take precedence over config file
+	accessKey := os.Getenv("MINIO_ACCESS_KEY")
+	if accessKey == "" {
+		accessKey = viper.GetString("minio.access_key")
+	}
+	
+	secretKey := os.Getenv("MINIO_SECRET_KEY")
+	if secretKey == "" {
+		secretKey = viper.GetString("minio.secret_key")
+	}
+	
 	useSSL := viper.GetBool("minio.use_ssl")
 	bucketName := viper.GetString("minio.bucket_name")
 

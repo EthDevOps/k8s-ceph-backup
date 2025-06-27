@@ -17,10 +17,13 @@ WORKDIR /root/
 # Copy the binary from builder
 COPY --from=builder /app/k8s-ceph-backup .
 
+# Copy entrypoint script
+COPY entrypoint.sh .
+
 # Create directories for temporary files and configuration
 RUN mkdir -p /tmp/k8s-ceph-backup /etc/ceph
-
+RUN mkdir -p /tmp/gnupg && chmod 600 /tmp/gnupg
 # Set permissions
-RUN chmod +x k8s-ceph-backup
+RUN chmod +x k8s-ceph-backup entrypoint.sh
 
-CMD ["./k8s-ceph-backup"]
+ENTRYPOINT ["./entrypoint.sh"]

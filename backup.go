@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -184,7 +185,8 @@ func (bs *BackupService) backupImage(image CephImage) error {
 	}
 	defer bs.cleanup(encryptedPath)
 
-	objectName := fmt.Sprintf("%s-%s-%s.rbd.gz.gpg", image.PVCName, image.Pool, image.ImageName)
+	isoDate := time.Now().UTC().Format("2006-01-02T15-04-05Z")
+	objectName := fmt.Sprintf("%s-%s.rbd.gz.gpg", image.PVCName, isoDate)
 	if err := bs.minioClient.UploadFile(encryptedPath, objectName); err != nil {
 		return fmt.Errorf("failed to upload to MinIO: %w", err)
 	}

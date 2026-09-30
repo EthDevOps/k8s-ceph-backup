@@ -78,6 +78,7 @@ func (bs *BackupService) Run(namespace string) error {
 	log.Infof("Found %d PVCs in namespace %s", len(pvcs.Items), namespace)
 
 	var cephImages []CephImage
+	failed := 0
 	for _, pvc := range pvcs.Items {
 		if pvc.Status.Phase != corev1.ClaimBound {
 			log.Warnf("Skipping PVC %s: not bound", pvc.Name)
@@ -92,6 +93,7 @@ func (bs *BackupService) Run(namespace string) error {
 		cephImage, err := bs.extractCephInfo(pvc)
 		if err != nil {
 			log.Errorf("Failed to extract CEPH info for PVC %s: %v", pvc.Name, err)
+			failed++
 			continue
 		}
 
@@ -105,8 +107,14 @@ func (bs *BackupService) Run(namespace string) error {
 	for _, image := range cephImages {
 		if err := bs.backupImage(image); err != nil {
 			log.Errorf("Failed to backup image %s/%s: %v", image.Pool, image.ImageName, err)
+			failed++
 			continue
 		}
+	}
+
+	// Surface partial failures as a non-zero exit so the CronJob is marked failed
+	if failed > 0 {
+		return fmt.Errorf("%d of %d PVCs failed to back up", failed, len(pvcs.Items))
 	}
 
 	return nil
